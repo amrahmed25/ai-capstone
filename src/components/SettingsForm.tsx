@@ -1,12 +1,21 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState, type ReactNode } from "react";
+import { useForm } from "react-hook-form";
 import {
   defaultSettings,
-  type SettingsFormProps,
+  settingsFormSchema,
   type SettingsFormValues,
-} from "./settingsFormTypes";
+} from "./settingsFormSchema";
+import type { SettingsFormProps } from "./settingsFormTypes";
 
 const inputClassName =
-  "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
+  "mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:ring-2";
+
+const inputValidClassName =
+  "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500/20";
+
+const inputInvalidClassName =
+  "border-red-400 focus:border-red-500 focus:ring-red-500/20";
 
 const labelClassName = "block text-sm font-medium text-slate-700";
 
@@ -20,9 +29,17 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-4 border-b border-slate-200 pb-8 last:border-b-0 last:pb-0">
+    <section
+      aria-labelledby={`${title.replace(/\s+/g, "-").toLowerCase()}-heading`}
+      className="space-y-4 border-b border-slate-200 pb-8 last:border-b-0 last:pb-0"
+    >
       <div>
-        <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+        <h2
+          id={`${title.replace(/\s+/g, "-").toLowerCase()}-heading`}
+          className="text-base font-semibold text-slate-900"
+        >
+          {title}
+        </h2>
         <p className="mt-1 text-sm text-slate-500">{description}</p>
       </div>
       <div className="space-y-4">{children}</div>
@@ -30,62 +47,45 @@ function Section({
   );
 }
 
-function Toggle({
-  id,
-  label,
-  description,
-  checked,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  description: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
+function FieldError({ id, message }: { id: string; message?: string }) {
+  if (!message) {
+    return null;
+  }
+
   return (
-    <div className="flex items-start justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-      <div>
-        <label htmlFor={id} className="text-sm font-medium text-slate-900">
-          {label}
-        </label>
-        <p className="mt-0.5 text-sm text-slate-500">{description}</p>
-      </div>
-      <input
-        id={id}
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-      />
-    </div>
+    <p id={id} role="alert" className="mt-1 text-sm text-red-600">
+      {message}
+    </p>
   );
 }
 
 function SettingsForm({ initialValues, onSubmit }: SettingsFormProps) {
-  const [values, setValues] = useState<SettingsFormValues>({
-    ...defaultSettings,
-    ...initialValues,
-  });
   const [savedMessage, setSavedMessage] = useState("");
+  const mergedDefaults = { ...defaultSettings, ...initialValues };
 
-  function updateField<K extends keyof SettingsFormValues>(
-    key: K,
-    value: SettingsFormValues[K],
-  ) {
-    setValues((current) => ({ ...current, [key]: value }));
-    setSavedMessage("");
-  }
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isValid },
+  } = useForm<SettingsFormValues>({
+    resolver: zodResolver(settingsFormSchema),
+    defaultValues: mergedDefaults,
+    mode: "onChange",
+  });
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function handleValidSubmit(values: SettingsFormValues) {
     onSubmit?.(values);
     setSavedMessage("Settings saved successfully.");
   }
 
   function handleReset() {
-    setValues({ ...defaultSettings, ...initialValues });
+    reset(mergedDefaults);
     setSavedMessage("");
+  }
+
+  function fieldClassName(hasError: boolean) {
+    return `${inputClassName} ${hasError ? inputInvalidClassName : inputValidClassName}`;
   }
 
   return (
@@ -100,7 +100,8 @@ function SettingsForm({ initialValues, onSubmit }: SettingsFormProps) {
       </header>
 
       <form
-        onSubmit={handleSubmit}
+        noValidate
+        onSubmit={handleSubmit(handleValidSubmit)}
         className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
       >
         <div className="space-y-8">
@@ -115,13 +116,18 @@ function SettingsForm({ initialValues, onSubmit }: SettingsFormProps) {
               <input
                 id="displayName"
                 type="text"
-                value={values.displayName}
-                onChange={(event) =>
-                  updateField("displayName", event.target.value)
-                }
                 placeholder="Jane Doe"
-                className={inputClassName}
                 autoComplete="name"
+                aria-invalid={errors.displayName ? true : undefined}
+                aria-describedby={
+                  errors.displayName ? "displayName-error" : undefined
+                }
+                className={fieldClassName(Boolean(errors.displayName))}
+                {...register("displayName")}
+              />
+              <FieldError
+                id="displayName-error"
+                message={errors.displayName?.message}
               />
             </div>
 
@@ -132,13 +138,14 @@ function SettingsForm({ initialValues, onSubmit }: SettingsFormProps) {
               <input
                 id="email"
                 type="email"
-                value={values.email}
-                onChange={(event) => updateField("email", event.target.value)}
                 placeholder="jane@example.com"
-                className={inputClassName}
                 autoComplete="email"
-                required
+                aria-invalid={errors.email ? true : undefined}
+                aria-describedby={errors.email ? "email-error" : undefined}
+                className={fieldClassName(Boolean(errors.email))}
+                {...register("email")}
               />
+              <FieldError id="email-error" message={errors.email?.message} />
             </div>
           </Section>
 
@@ -152,14 +159,8 @@ function SettingsForm({ initialValues, onSubmit }: SettingsFormProps) {
               </label>
               <select
                 id="theme"
-                value={values.theme}
-                onChange={(event) =>
-                  updateField(
-                    "theme",
-                    event.target.value as SettingsFormValues["theme"],
-                  )
-                }
-                className={inputClassName}
+                className={fieldClassName(false)}
+                {...register("theme")}
               >
                 <option value="light">Light</option>
                 <option value="dark">Dark</option>
@@ -173,11 +174,8 @@ function SettingsForm({ initialValues, onSubmit }: SettingsFormProps) {
               </label>
               <select
                 id="language"
-                value={values.language}
-                onChange={(event) =>
-                  updateField("language", event.target.value)
-                }
-                className={inputClassName}
+                className={fieldClassName(false)}
+                {...register("language")}
               >
                 <option value="en">English</option>
                 <option value="es">Spanish</option>
@@ -191,29 +189,77 @@ function SettingsForm({ initialValues, onSubmit }: SettingsFormProps) {
             title="Notifications"
             description="Choose what updates you want to receive."
           >
-            <Toggle
-              id="emailNotifications"
-              label="Email notifications"
-              description="Receive account and security alerts by email."
-              checked={values.emailNotifications}
-              onChange={(checked) =>
-                updateField("emailNotifications", checked)
-              }
-            />
-            <Toggle
-              id="pushNotifications"
-              label="Push notifications"
-              description="Get real-time alerts in your browser."
-              checked={values.pushNotifications}
-              onChange={(checked) => updateField("pushNotifications", checked)}
-            />
-            <Toggle
-              id="weeklyDigest"
-              label="Weekly digest"
-              description="A summary of activity sent every Monday."
-              checked={values.weeklyDigest}
-              onChange={(checked) => updateField("weeklyDigest", checked)}
-            />
+            <div className="flex items-start justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <div>
+                <label
+                  htmlFor="emailNotifications"
+                  className="text-sm font-medium text-slate-900"
+                >
+                  Email notifications
+                </label>
+                <p
+                  id="emailNotifications-description"
+                  className="mt-0.5 text-sm text-slate-500"
+                >
+                  Receive account and security alerts by email.
+                </p>
+              </div>
+              <input
+                id="emailNotifications"
+                type="checkbox"
+                aria-describedby="emailNotifications-description"
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                {...register("emailNotifications")}
+              />
+            </div>
+
+            <div className="flex items-start justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <div>
+                <label
+                  htmlFor="pushNotifications"
+                  className="text-sm font-medium text-slate-900"
+                >
+                  Push notifications
+                </label>
+                <p
+                  id="pushNotifications-description"
+                  className="mt-0.5 text-sm text-slate-500"
+                >
+                  Get real-time alerts in your browser.
+                </p>
+              </div>
+              <input
+                id="pushNotifications"
+                type="checkbox"
+                aria-describedby="pushNotifications-description"
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                {...register("pushNotifications")}
+              />
+            </div>
+
+            <div className="flex items-start justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <div>
+                <label
+                  htmlFor="weeklyDigest"
+                  className="text-sm font-medium text-slate-900"
+                >
+                  Weekly digest
+                </label>
+                <p
+                  id="weeklyDigest-description"
+                  className="mt-0.5 text-sm text-slate-500"
+                >
+                  A summary of activity sent every Monday.
+                </p>
+              </div>
+              <input
+                id="weeklyDigest"
+                type="checkbox"
+                aria-describedby="weeklyDigest-description"
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                {...register("weeklyDigest")}
+              />
+            </div>
           </Section>
 
           <Section
@@ -226,27 +272,37 @@ function SettingsForm({ initialValues, onSubmit }: SettingsFormProps) {
               </label>
               <select
                 id="profileVisibility"
-                value={values.profileVisibility}
-                onChange={(event) =>
-                  updateField(
-                    "profileVisibility",
-                    event.target.value as SettingsFormValues["profileVisibility"],
-                  )
-                }
-                className={inputClassName}
+                className={fieldClassName(false)}
+                {...register("profileVisibility")}
               >
                 <option value="public">Public</option>
                 <option value="private">Private</option>
               </select>
             </div>
 
-            <Toggle
-              id="showActivity"
-              label="Show activity status"
-              description="Let others see when you were last active."
-              checked={values.showActivity}
-              onChange={(checked) => updateField("showActivity", checked)}
-            />
+            <div className="flex items-start justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <div>
+                <label
+                  htmlFor="showActivity"
+                  className="text-sm font-medium text-slate-900"
+                >
+                  Show activity status
+                </label>
+                <p
+                  id="showActivity-description"
+                  className="mt-0.5 text-sm text-slate-500"
+                >
+                  Let others see when you were last active.
+                </p>
+              </div>
+              <input
+                id="showActivity"
+                type="checkbox"
+                aria-describedby="showActivity-description"
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                {...register("showActivity")}
+              />
+            </div>
           </Section>
         </div>
 
@@ -269,7 +325,8 @@ function SettingsForm({ initialValues, onSubmit }: SettingsFormProps) {
             </button>
             <button
               type="submit"
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500"
+              disabled={!isValid}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-300"
             >
               Save changes
             </button>
