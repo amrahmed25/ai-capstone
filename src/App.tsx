@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import PlaygroundApp from "../../playground/PlaygroundApp";
 import Header from "./components/Header";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -15,6 +16,10 @@ function AuthRedirect({ children }: { children: React.ReactNode }) {
   }
 
   return children;
+}
+
+function PlaygroundRoute() {
+  return <PlaygroundApp />;
 }
 
 function AppRoutes() {
@@ -50,6 +55,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route path="/playground" element={<PlaygroundRoute />} />
         <Route
           path="/auth"
           element={
