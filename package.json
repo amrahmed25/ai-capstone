@@ -12,7 +12,10 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.42",
+    "@ai-sdk/google": "^4.0.51",
     "@hookform/resolvers": "^5.4.0",
+    "ai": "^7.0.79",
     "firebase": "^12.18.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
