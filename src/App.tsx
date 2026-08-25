@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import PlaygroundApp from "../../playground/PlaygroundApp";
+import PlaygroundApp from "../playground/PlaygroundApp";
 import Header from "./components/Header";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -7,6 +7,7 @@ import AuthView from "./pages/auth/AuthView";
 import FavoritesView from "./pages/favorites/FavoritesView";
 import HomeView from "./pages/home/HomeView";
 import { useHomeViewModel } from "./pages/home/useHomeViewModel";
+import ChatView from "./pages/chat/ChatView";
 
 function AuthRedirect({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -55,6 +56,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route path="/chat" element={<ChatView />} />
         <Route path="/playground" element={<PlaygroundRoute />} />
         <Route
           path="/auth"

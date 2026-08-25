@@ -49,6 +49,13 @@ function Header({ query, onQueryChange, onSearch, onHomeClick }: HeaderProps) {
           >
             Favorites
           </Link>
+          <Link
+            to="/chat"
+            className="text-slate-300 transition hover:text-white flex items-center gap-1.5"
+          >
+            <span className="inline-block h-2 w-2 rounded-full bg-indigo-500 animate-pulse"></span>
+            AI Assistant
+          </Link>
         </nav>
 
         <form
