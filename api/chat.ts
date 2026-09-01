@@ -3,7 +3,7 @@
 import { streamText } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { AI_CONFIG } from "../server/aiConfig";
+import { AI_CONFIG } from "../server/aiConfig.js";
 
 export default async function handler(req: any, res: any) {
   try {
